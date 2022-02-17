@@ -4,9 +4,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="inginious-dispenser-demo",
+    name="inginious-dispenser-cat",
     version="0.1dev0",
-    description="Plugin to add demo task dispenser",
+    description="Plugin to add cat task dispenser",
     packages=find_packages(),
     install_requires=["inginious>=0.8dev0"],
     tests_require=[],
@@ -16,5 +16,5 @@ setup(
     author="The INGInious authors",
     author_email="inginious@info.ucl.ac.be",
     license="AGPL 3",
-    url="https://github.com/UCL-INGI/INGInious-dispenser-demo"
+    url="https://github.com/maleclercq/CAT-Dispenser-Plugin"
 )

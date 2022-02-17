@@ -32,7 +32,7 @@ class StaticMockPage(INGIniousPage):
         return self.GET(path)
 
 
-class DemoDispenser(TaskDispenser):
+class CatDispenser(TaskDispenser):
 
     def __init__(self, task_list_func, dispenser_data):
         '''
@@ -51,7 +51,7 @@ class DemoDispenser(TaskDispenser):
         '''
         :return: a unique id for the task dispenser
         '''
-        return "demo_dispenser"
+        return "cat_dispenser"
 
     @classmethod
     def get_name(cls, language):
@@ -59,15 +59,13 @@ class DemoDispenser(TaskDispenser):
         :param language: the user language
         :return: a human readable name for the task dispenser
         '''
-        return "Demo task dispenser"
+        return "Computerized Adapative Testing dispenser"
 
     def add_database(self,database):
         self.database = database
-        print("database saved")
         return
 
     def get_dispenser_data(self):
-        print("here1")
         return self._data
 
     def __arrayToStrJSON(self,array):
@@ -92,14 +90,10 @@ class DemoDispenser(TaskDispenser):
     
     def getTasks(self):
         tasks = []
-        print(self.get_dispenser_data())
         for val in self.database.user_tasks.find({'courseid':self.originalCourse}):
             task = val['taskid']
             if(task not in tasks):
                 tasks.append(task)
-        #return(tasks)
-        print(tasks)
-        print(self.get_dispenser_data())
         return(self.get_dispenser_data())
 
     def __sendDataToR(self):
@@ -123,8 +117,6 @@ class DemoDispenser(TaskDispenser):
             if not isOnlyNA:
                 usersDatas.append(userData)
         strJSON = self.__arrayToStrJSON(usersDatas)
-        print(usersDatas)
-        
         newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         response = requests.post("http://"+MYIP+":8766/newExam",data=json.dumps({'data': strJSON,"index":self.name}),headers=newHeaders)
 
@@ -142,7 +134,6 @@ class DemoDispenser(TaskDispenser):
         :param task_data: a helper dictionary containing the human-readable name and download urls
         :return: HTML code for the task list edition page
         '''
-        print("here2")
         self.__sendDataToR()
         return template_helper.render("admin/task_list_edit.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                       dispenser_data=self._data, tasks=task_data)
@@ -155,7 +146,6 @@ class DemoDispenser(TaskDispenser):
         :param tag_list: the course tag list to help filtering the tasks (can be ignored)
         :return: HTML code for the student task list page
         '''
-        print("here3")
         score = ""
         if self.score != -1 and not self.finalScore:
             score = "Actual Grade: " + str(round(self.score, 2)) + " %"
@@ -163,7 +153,6 @@ class DemoDispenser(TaskDispenser):
             score = "Final Grade: "  + str(round(self.score, 2)) + " %"
         datas = {"data":self._data,"score":score}
         
-        print(self._data)
         return template_helper.render("student/task_list.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                       tasks=self._task_list_func(), tasks_data=tasks_data, tag_filter_list=tag_list,
                                       dispenser_data=datas)
@@ -209,12 +198,7 @@ class DemoDispenser(TaskDispenser):
         for val in self.database.user_tasks.find({'courseid':self.name,'username':username}):
             task = val['taskid']
             taskId = self.__getTaskId(task)
-            print("VAL:")
-            print(val)
-            print("TaskID:")
-            print(taskId)
             if taskId != -1 and val['tried'] != 0:
-                print(val)
                 tasksIds.append(taskId)
                 grades.append(val['grade']/100)
         if len(tasksIds) == 0:
@@ -227,29 +211,16 @@ class DemoDispenser(TaskDispenser):
         :param usernames: the list of users usernames who the user task list is needed for
         :return: a dictionary with username as key and the user task list as value
         '''
-        tasks = self._task_list_func()
-        task_list = [taskid for taskid in self._data if tasks[taskid].get_accessible_time().after_start()]
-        taskTempo = task_list
-        seed = float(hash(str(usernames)))
-        random.seed(seed)
-        random.shuffle(taskTempo)
-        print(task_list)
-
         ret2 = {}
         for user in usernames:
             questions = self.__getAlreadyAnswered(user)
             questionsId = questions[0]
             responses = questions[1]
-            print(questionsId)
             newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
             response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.name,'alreadyAnswered':questionsId,'responseList':responses}),headers=newHeaders)
-            print("RESPONSE:")
-            print(response.text)
             responseJSON = json.loads(response.text)
             nextQuestion = responseJSON["index"][0]
-            score = responseJSON["score"][0]
-            print("SCORE: " + str(score) + " %")
-            self.score = score
+            self.score = responseJSON["score"][0]
             if nextQuestion == -1:
                 questionsId = []
                 self.finalScore = True
@@ -257,32 +228,24 @@ class DemoDispenser(TaskDispenser):
                 questionsId = [nextQuestion]       # Only last question displayed
                 #questionsId.append(nextQuestion)  # All Questions displayed
             ret2[user] = self.__getTasksName(questionsId)
-        print(ret2)
-        ret = {username: taskTempo for username in usernames}
-        print(ret)
-        print("here5")
         return ret2
 
     def get_ordered_tasks(self):
         """ Returns a serialized version of the tasks structure as an OrderedDict"""
         tasks = self._task_list_func()
-        print("here6")
         return OrderedDict([(taskid, tasks[taskid]) for taskid in self._data if taskid in tasks])
 
     def get_task_order(self, taskid):
         """ Get the position of this task in the course """
         tasks = self._data
-        print("here7")
         if taskid in tasks:
             return tasks.index(taskid)
         else:
             return len(tasks)
 
-
 def init(plugin_manager, course_factory, client, plugin_config):
     # TODO: Replace by shared static middleware and let webserver serve the files
-    plugin_manager.add_page('/plugins/disp_demo/static/<path:path>', StaticMockPage.as_view("demodispenserstaticpage"))
-    plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_demo/static/admin.js")
-    plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_demo/static/student.js")
-    course_factory.add_task_dispenser(DemoDispenser)
-    print("here8")
+    plugin_manager.add_page('/plugins/disp_cat/static/<path:path>', StaticMockPage.as_view("catdispenserstaticpage"))
+    plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/admin.js")
+    plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/student.js")
+    course_factory.add_task_dispenser(CatDispenser)

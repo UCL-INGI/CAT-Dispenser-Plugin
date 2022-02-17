@@ -8,7 +8,7 @@
 *************************/
 
 // Sets the content of the task modal according to the currently present tasks in task-list
-function demo_disp_prepare_task_modal(target) {
+function cat_disp_prepare_task_modal(target) {
     var placed_task = [];
     $('.task').each(function () {
         placed_task.push(this.id.slice(5));
@@ -31,7 +31,7 @@ function demo_disp_prepare_task_modal(target) {
 }
 
 // Searches in existing tasks names from the filesystem
-function demo_disp_search_task(search_field) {
+function cat_disp_search_task(search_field) {
     var value = $(search_field).val().toLowerCase();
     $("#modal_task_list .modal_task").filter(function () {
         const match_search = $(this).children(".task_name").text().toLowerCase().indexOf(value) > -1;
@@ -41,7 +41,7 @@ function demo_disp_search_task(search_field) {
 }
 
 // Selects task for addition
-function demo_disp_select_task(task) {
+function cat_disp_select_task(task) {
     $(task).toggleClass("bg-primary text-white");
     const input = $(task).find("input");
     input.attr("checked", !input.attr("checked"));
@@ -49,7 +49,7 @@ function demo_disp_select_task(task) {
 
 // Adds the select items from the modal to the main tasks-list and register the addition through
 // - dispenser_add_task
-function demo_disp_add_tasks(button) {
+function cat_disp_add_tasks(button) {
     task_id= $("#new_task_id").val();
     var selected_tasks = [];
     var existing_task = $(button).attr("id") == "add_existing_tasks";
@@ -86,7 +86,7 @@ function demo_disp_add_tasks(button) {
 ***************************/
 
 // Sets the delete modal fields according to the selected task
-function demo_disp_prepare_delete_modal(button) {
+function cat_disp_prepare_delete_modal(button) {
     $('#delete_task_modal .submit').attr('data-target', button.closest('.task').id);
     $('#delete_task_modal .wipe_tasks').prop("checked", false);
 }
@@ -94,7 +94,7 @@ function demo_disp_prepare_delete_modal(button) {
 // Deletes the task from the task-lists and register deletion trough
 // - dispenser_delete_task
 // - or; dispenser_wipe_task
-function demo_disp_delete_task(button, keep_files){
+function cat_disp_delete_task(button, keep_files){
     $(button).mouseleave().focusout();
     taskid = button.getAttribute('data-target').slice(5);
 
@@ -117,7 +117,7 @@ function demo_disp_delete_task(button, keep_files){
 
 // Generates the json-encoded data to save into the course task dispenser data
 // This functions must be named dispenser_structure_{{ dispenser_id }}
-function dispenser_structure_demo_dispenser() {
+function dispenser_structure_cat_dispenser() {
     const tasks_list = [];
     $("#tasks-list .task").each(function (index) {
         tasks_list[index] = this.id.slice(5);

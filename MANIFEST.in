@@ -1,4 +1,4 @@
 include LICENSE
 include README.md
-recursive-include inginious-dispenser-demo/static *
-recursive-include inginious-dispenser-demo/templates *
+recursive-include inginious-dispenser-cat/static *
+recursive-include inginious-dispenser-cat/templates *

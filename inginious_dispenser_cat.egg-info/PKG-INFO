@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
-Name: inginious-dispenser-demo
+Name: inginious-dispenser-cat
 Version: 0.1.dev0
-Summary: Plugin to add demo task dispenser
-Home-page: https://github.com/UCL-INGI/INGInious-dispenser-demo
+Summary: Plugin to add cat task dispenser
+Home-page: https://github.com/maleclercq/CAT-Dispenser-Plugin
 Author: The INGInious authors
 Author-email: inginious@info.ucl.ac.be
 License: AGPL 3

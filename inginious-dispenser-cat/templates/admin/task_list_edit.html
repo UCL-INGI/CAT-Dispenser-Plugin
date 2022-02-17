@@ -8,7 +8,7 @@
         <span class="title"> {{ _("List of exercises") }}</span>
         <span style="display: none" class="divider"></span>
         <span>
-            <button onclick="demo_disp_prepare_task_modal(this)" class="add_task btn close" data-toggle="modal" data-target="#addTaskModal">
+            <button onclick="cat_disp_prepare_task_modal(this)" class="add_task btn close" data-toggle="modal" data-target="#addTaskModal">
                 <i class="fa fa-plus"></i>
             </button>
         </span>
@@ -47,7 +47,7 @@
         <span><i class="fa fa-arrows handle pt-2" style="cursor: pointer"></i></span>
         <span class="task_name pt-1 pl-3">{{ _("New task with id: ") }}</span>
         <div class="ml-auto">
-            <button class="delete_task btn btn-sm btn-danger"  data-toggle="modal" data-target="#delete_task_modal" onclick="demo_disp_prepare_delete_modal(this, true)"
+            <button class="delete_task btn btn-sm btn-danger"  data-toggle="modal" data-target="#delete_task_modal" onclick="cat_disp_prepare_delete_modal(this, true)"
                     title="{{ _('Delete invalid task') }}" data-toggle="tooltip" data-placement="bottom">
                 <i class="fa fa-trash"></i>
             </button>

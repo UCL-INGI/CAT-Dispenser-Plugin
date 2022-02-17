@@ -59,7 +59,7 @@ class CatDispenser(TaskDispenser):
         :param language: the user language
         :return: a human readable name for the task dispenser
         '''
-        return "Cat task dispenser"
+        return "Computerized Adapative Testing dispenser"
 
     def add_database(self,database):
         self.database = database
