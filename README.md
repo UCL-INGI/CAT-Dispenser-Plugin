@@ -5,7 +5,7 @@ filter and determine the order in which tasks are shown to the students.
 
 ## Installing
 
-    pip3 install git+https://github.com/UCL-INGI/INGInious-dispenser-cat
+    pip3 install git+https://github.com/maleclercq/CAT-Dispenser-Plugin
 
 ## Activating
 
