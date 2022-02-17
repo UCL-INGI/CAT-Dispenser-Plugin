@@ -1,0 +1,38 @@
+{# This file is part of INGInious. See the LICENSE and the COPYRIGHTS files for #}
+{# more information about the licensing of this file. #}
+
+<div class="modal fade" id="addTaskModal" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">{{ _("Add tasks") }}</h3>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body list-group">
+                <h4>{{ _("Create new task") }}</h4>
+                <div class="form-group row">
+                    <div class="col-sm-8"><input type="text" class="form-control" id="new_task_id" placeholder="{{ _('New task id') }}" /></div>
+                    <div class="col-sm-4"><button id="add_new_task" onclick="demo_disp_add_tasks(this)" class="btn btn-info btn-large btn-block" type="button" data-dismiss="modal">{{ _("Create new task") }}</button></div>
+                </div>
+                <h4>{{ _("Import from course filesystem") }}</h4>
+                <input id="searchTask" class="form-control" type="text" placeholder="{{ _('Search...') }}" onkeyup="demo_disp_search_task(this)">
+                <p id="no_task_available" class="text-center align-middle font-weight-bold">
+                    {{ _("No unassigned tasks in the filesystem of this course") }}
+                </p>
+                <br>
+                <div id="modal_task_list">
+                    {% for taskid in tasks %}
+                    <div id= "modal_task_{{taskid}}" class="modal_task list-group-item list-group-item-action" onclick="demo_disp_select_task(this)">
+                        <span class="task_name"> {{ tasks[taskid]["name"] }}</span> <br>
+                        <input style="display: none" type="checkbox" name="task" value="{{taskid}}">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="add_existing_tasks" onclick="demo_disp_add_tasks(this)" type="button" class="btn btn-success" data-dismiss="modal">{{_("Add")}}</button>
+            </div>
+        </div>
+
+    </div>
+</div>

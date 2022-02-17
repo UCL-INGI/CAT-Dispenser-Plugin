@@ -1,0 +1,52 @@
+{# This file is part of INGInious. See the LICENSE and the COPYRIGHTS files for #}
+{# more information about the licensing of this file. #}
+
+{% set registered = user_manager.course_is_user_registered(course) %}
+{% set dispenser = dispenser_data.data %}
+
+<div class="section tasks_list card mb-4">
+    <div class="card-header d-flex justify-content-between pr-3" onclick="task_list_dropdown(this)">
+        <span class="title">{{ _("List of exercises") }}</span>
+        <span style="font-size: 1.5rem;" class="dropdown_button fa fa-caret-down close"></span>
+    </div>
+    <div class="content list-group list-group-flush tasks-list">
+        {% for taskid in dispenser %}
+            {% set task = tasks[taskid] %}
+            {% if taskid in tasks_data %}
+                {% set succeeded = tasks_data[taskid]["succeeded"] %}
+                {% set completion = tasks_data[taskid]["grade"] %}
+                <a href="{{ get_homepath() }}/course/{{course.get_id()}}/{{taskid}}" class="list-group-item list-group-item-action
+                    {% if not task.get_accessible_time().is_open() %} disabled {% endif %}">
+                    <div class="row">
+                        <div class="col-xs-12 col-md-7 pl-1">
+                            <i style="color: {% if succeeded %}#468847{% else %}transparent{% endif %};" class="fa fa-check"></i>
+                            {{ task.get_name(user_manager.session_language()) }}
+                            {% if not task.get_accessible_time().is_open() %}
+                                - <b> {{ _("deadline reached") }} </b>
+                            {% endif %}
+                        </div>
+                        <div class="col-xs-12 col-md-5">
+                            {% if registered %}
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" aria-valuenow="{{ completion | int }}" aria-valuemin="0" aria-valuemax="100" style="width: {{ completion | int }}%">
+                                        {% if completion.is_integer() %}{{ completion | int }}{% else %}{{ completion }}{% endif %} %
+                                    </div>
+                                </div>
+                                {{ template_helper.call('task_list_item', course=course, task=task, tasks_data=tasks_data, template_helper=template_helper) | safe }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div id="tags_of_task" style="display:none;">
+                        {% for category in task.get_categories() %}
+                            {% set tag = tag_list[category] %}
+                            {% if tag.is_visible_for_student() or user_manager.has_staff_rights_on_course(course) %}
+                                <div id="tag" data-tag-name="{{tag.get_id()}}"></div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+<h1>{{ dispenser_data.score }}</h1>

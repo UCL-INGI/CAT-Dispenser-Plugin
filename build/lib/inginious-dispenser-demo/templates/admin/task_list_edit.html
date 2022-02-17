@@ -1,0 +1,58 @@
+{# This file is part of INGInious. See the LICENSE and the COPYRIGHTS files for #}
+{# more information about the licensing of this file. #}
+
+{% set is_admin = user_manager.has_admin_rights_on_course(course) %}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between">
+        <span class="title"> {{ _("List of exercises") }}</span>
+        <span style="display: none" class="divider"></span>
+        <span>
+            <button onclick="demo_disp_prepare_task_modal(this)" class="add_task btn close" data-toggle="modal" data-target="#addTaskModal">
+                <i class="fa fa-plus"></i>
+            </button>
+        </span>
+
+    </div>
+    <div id="tasks-list" class="list-group list-group-flush">
+        {% for taskid in dispenser_data %}
+            <div id="task_{{ taskid }}" class="task list-group-item list-group-item-action d-flex">
+                <span><i class="fa fa-arrows handle pt-2" style="cursor: pointer"></i></span>
+                <span class="task_name pt-1 pl-3">{{ tasks[taskid]["name"] }}</span>
+                {% include "admin/task_buttons.html" %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script type="text/javascript">
+    var sortable = new Sortable(document.getElementById('tasks-list'), {
+        handle: '.handle',
+        animation: 150
+    });
+</script>
+
+{% include "admin/modal_add.html" %}
+
+{# Templates for task items #}
+<div id="all_tasks" style="display: none">
+    {% for taskid in tasks %}
+        <div id="task_{{ taskid }}_clone" class="task list-group-item list-group-item-action d-flex">
+            <span><i class="fa fa-arrows handle pt-2" style="cursor: pointer"></i></span>
+            <span class="task_name pt-1 pl-3">{{ tasks[taskid]["name"] }}</span>
+            {% include "admin/task_buttons.html" %}
+        </div>
+    {% endfor %}
+    <div id="new_task_clone" class="task list-group-item list-group-item-action d-flex">
+        <span><i class="fa fa-arrows handle pt-2" style="cursor: pointer"></i></span>
+        <span class="task_name pt-1 pl-3">{{ _("New task with id: ") }}</span>
+        <div class="ml-auto">
+            <button class="delete_task btn btn-sm btn-danger"  data-toggle="modal" data-target="#delete_task_modal" onclick="demo_disp_prepare_delete_modal(this, true)"
+                    title="{{ _('Delete invalid task') }}" data-toggle="tooltip" data-placement="bottom">
+                <i class="fa fa-trash"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% include "admin/modal_delete.html" %}
