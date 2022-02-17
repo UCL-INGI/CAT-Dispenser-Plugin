@@ -1,0 +1,3 @@
+build/*
+dist/*
+inginious_dispenser_cat.egg-info/*
