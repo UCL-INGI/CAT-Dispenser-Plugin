@@ -1,1 +1,0 @@
-inginious>=0.8dev0
