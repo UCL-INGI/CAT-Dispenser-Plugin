@@ -9,13 +9,13 @@ import json
 import random
 import requests
 
-
 from collections import OrderedDict
 from flask import send_from_directory
 
 from inginious.common.base import id_checker
 from inginious.frontend.pages.utils import INGIniousPage
 from inginious.frontend.task_dispensers import TaskDispenser
+from inginious.frontend.accessible_time import AccessibleTime
 
 __version__ = "0.1.dev0"
 
@@ -31,18 +31,35 @@ class StaticMockPage(INGIniousPage):
     def POST(self, path):
         return self.GET(path)
 
-
+class Test(INGIniousPage):
+    def GET(self,courseidfrom,courseid,iswooclap):
+        if(iswooclap == "true"):
+            iswooclap = True
+        else:
+            iswooclap = False
+        self.database.cat_info.delete_many({'courseid':courseid})
+        self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid,'iswooclap':iswooclap})
+        return "OK"
+    
 class CatDispenser(TaskDispenser):
-
-    def __init__(self, task_list_func, dispenser_data):
+    def __init__(self, task_list_func, dispenser_data, database, courseId):
         '''
         :param task_list_func: a function returning a dictionary with filesystem taskid as keys and task objects as values
         :param dispenser_data: the dispenser data as written in course.yaml
         '''
+        self.database = database
+        self.courseId = courseId
+
+        #initial values
+        self.isWooclap = False 
+        self.originalCourse = -1
+
+        for result in self.database.cat_info.find({"courseid":self.courseId}):
+            self.originalCourse = result['courseidfrom']
+            self.isWooclap = result['iswooclap']
+        
         self._task_list_func = task_list_func
         self._data = dispenser_data
-        self.originalCourse = "CatRandom30"
-        self.name = "CatDemo1"
         self.score = -1
         self.finalScore = False
 
@@ -67,6 +84,14 @@ class CatDispenser(TaskDispenser):
 
     def get_dispenser_data(self):
         return self._data
+
+    def __vectorToStrJSON(self,array):
+        strJSON = "["
+        for i in range(len(array)):
+            line = str(array[i]) + ","
+            strJSON += line
+        strJSON = strJSON[:-1] + "]"        #remove last , and add ]
+        return strJSON
 
     def __arrayToStrJSON(self,array):
         strJSON = "["
@@ -94,7 +119,20 @@ class CatDispenser(TaskDispenser):
             task = val['taskid']
             if(task not in tasks):
                 tasks.append(task)
+        #UGH WTF?
         return(self.get_dispenser_data())
+
+    def __sendDataToRWooclap(self):
+        tasks = self.getTasks() #keep order
+        averageVector = []
+        for task in tasks:
+            average = -1
+            for stat in self.database.cat_stats.find({'courseid':self.courseId,'taskid':task}):
+                average = stat['average']
+            averageVector.append(average)
+        strJSON = self.__vectorToStrJSON(averageVector)
+        newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+        response = requests.post("http://"+MYIP+":8766/newExamWooclap",data=json.dumps({'data': strJSON,"index":self.courseId}),headers=newHeaders)
 
     def __sendDataToR(self):
         users = self.getUsers()
@@ -118,11 +156,11 @@ class CatDispenser(TaskDispenser):
                 usersDatas.append(userData)
         strJSON = self.__arrayToStrJSON(usersDatas)
         newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = requests.post("http://"+MYIP+":8766/newExam",data=json.dumps({'data': strJSON,"index":self.name}),headers=newHeaders)
+        response = requests.post("http://"+MYIP+":8766/newExam",data=json.dumps({'data': strJSON,"index":self.courseId}),headers=newHeaders)
 
     '''def __deleteDataToR(self):
         newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = requests.delete("http://"+MYIP":8766/deleteItemBank",data=json.dumps({'data': self.name}),headers=newHeaders)'''
+        response = requests.delete("http://"+MYIP":8766/deleteItemBank",data=json.dumps({'data': self.courseId}),headers=newHeaders)'''
 
     '''
     Quand on arrive sur la liste des exo ET que on applique les changements
@@ -134,9 +172,12 @@ class CatDispenser(TaskDispenser):
         :param task_data: a helper dictionary containing the human-readable name and download urls
         :return: HTML code for the task list edition page
         '''
-        self.__sendDataToR()
+        if not self.isWooclap:
+            self.__sendDataToR()
+        else:
+            self.__sendDataToRWooclap()
         return template_helper.render("admin/task_list_edit.html", template_folder=PATH_TO_TEMPLATES, course=course,
-                                      dispenser_data=self._data, tasks=task_data)
+                                    dispenser_data=self._data, tasks=task_data)
 
     def render(self, template_helper, course, tasks_data, tag_list):
         '''
@@ -195,14 +236,14 @@ class CatDispenser(TaskDispenser):
     def __getAlreadyAnswered(self,username):
         tasksIds = []
         grades = []
-        for val in self.database.user_tasks.find({'courseid':self.name,'username':username}):
+        for val in self.database.user_tasks.find({'courseid':self.courseId,'username':username}):
             task = val['taskid']
             taskId = self.__getTaskId(task)
             if taskId != -1 and val['tried'] != 0:
                 tasksIds.append(taskId)
                 grades.append(val['grade']/100)
         if len(tasksIds) == 0:
-            return(-1,-1)
+            return([],-1)
         return (tasksIds,grades)
 
     def get_user_task_list(self, usernames):
@@ -217,7 +258,7 @@ class CatDispenser(TaskDispenser):
             questionsId = questions[0]
             responses = questions[1]
             newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.name,'alreadyAnswered':questionsId,'responseList':responses}),headers=newHeaders)
+            response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.courseId,'alreadyAnswered':questionsId,'responseList':responses}),headers=newHeaders)
             responseJSON = json.loads(response.text)
             nextQuestion = responseJSON["index"][0]
             self.score = responseJSON["score"][0]
@@ -225,8 +266,8 @@ class CatDispenser(TaskDispenser):
                 questionsId = []
                 self.finalScore = True
             else :
-                questionsId = [nextQuestion]       # Only last question displayed
-                #questionsId.append(nextQuestion)  # All Questions displayed
+                #questionsId = [nextQuestion]       # Only last question displayed
+                questionsId.append(nextQuestion)    # All Questions displayed
             ret2[user] = self.__getTasksName(questionsId)
         return ret2
 
@@ -242,10 +283,33 @@ class CatDispenser(TaskDispenser):
             return tasks.index(taskid)
         else:
             return len(tasks)
+    
+def task_accessibility(course, task, default_value, database, user_manager):
+    dispenser = course.get_task_dispenser().get_id()
+    if dispenser != "cat_dispenser":
+        return default_value
+    courseid = course.get_id()
+    username = user_manager.session_username()
+    taskid = task.get_id()
+    submissions = database.user_tasks.find({'courseid':courseid,'taskid':taskid,'username':username})
+    nbr_submissions = 0
+    tried = False
+    for sub in submissions:
+        nbr_submissions += 1
+        if sub['tried'] != 0:
+            tried = True
+    if nbr_submissions > 0 and tried:
+        return AccessibleTime(False)
+    else:
+        return default_value
 
 def init(plugin_manager, course_factory, client, plugin_config):
     # TODO: Replace by shared static middleware and let webserver serve the files
+    plugin_manager.add_page('/plugins/disp_cat/static/send_data/<courseidfrom>/<courseid>/<iswooclap>',Test.as_view('catdispensertest'))
     plugin_manager.add_page('/plugins/disp_cat/static/<path:path>', StaticMockPage.as_view("catdispenserstaticpage"))
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/admin.js")
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/student.js")
+    plugin_manager.add_hook('task_accessibility', lambda course, task, default: task_accessibility(course, task, default,
+                                                                                                 plugin_manager.get_database(),
+                                                                                                 plugin_manager.get_user_manager()))
     course_factory.add_task_dispenser(CatDispenser)

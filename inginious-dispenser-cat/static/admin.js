@@ -7,6 +7,18 @@
    Task addition helpers
 *************************/
 
+function test(courseid){
+    var checkBox = document.getElementById("wooclap").checked;
+    var courseIdFrom = document.getElementById("course_id_from").value;
+    if(courseIdFrom === "" || courseIdFrom === undefined){
+        courseIdFrom = "undefined"
+    }
+    console.log(courseIdFrom)
+    console.log(checkBox)
+    console.log(courseid)
+    $.get(`/plugins/disp_cat/static/send_data/${courseIdFrom}/${courseid}/${checkBox}`)
+}
+
 // Sets the content of the task modal according to the currently present tasks in task-list
 function cat_disp_prepare_task_modal(target) {
     var placed_task = [];
