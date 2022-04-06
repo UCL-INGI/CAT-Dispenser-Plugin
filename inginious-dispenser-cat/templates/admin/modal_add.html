@@ -14,13 +14,6 @@
                     <div class="col-sm-8"><input type="text" class="form-control" id="new_task_id" placeholder="{{ _('New task id') }}" /></div>
                     <div class="col-sm-4"><button id="add_new_task" onclick="cat_disp_add_tasks(this)" class="btn btn-info btn-large btn-block" type="button" data-dismiss="modal">{{ _("Create new task") }}</button></div>
                 </div>
-                <div>
-                    <input type="checkbox" id="wooclap" name="wooclap">
-                    <label for="wooclap">Is a Wooclap</label>
-                </div>
-                <div>
-                    <input type="text" class="form-control" id="course_id_from" placeholder="Original Course ID (if not a wooclap)">
-                </div>
                 <div class="modal-body list-group"><h4>{{ _("Import from course filesystem") }}</h4></div>
                 <input id="searchTask" class="form-control" type="text" placeholder="{{ _('Search...') }}" onkeyup="cat_disp_search_task(this)">
                 <p id="no_task_available" class="text-center align-middle font-weight-bold">
@@ -37,7 +30,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="add_existing_tasks" onclick="test('{{course.get_id()}}');cat_disp_add_tasks(this)" type="button" class="btn btn-success" data-dismiss="modal">{{_("Add")}}</button>
+                <button id="add_existing_tasks" onclick="cat_disp_add_tasks(this)" type="button" class="btn btn-success" data-dismiss="modal">{{_("Add")}}</button>
             </div>
         </div>
 

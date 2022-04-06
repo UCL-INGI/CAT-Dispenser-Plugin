@@ -7,7 +7,7 @@
    Task addition helpers
 *************************/
 
-function test(courseid){
+function send_value(courseid){
     var checkBox = document.getElementById("wooclap").checked;
     var courseIdFrom = document.getElementById("course_id_from").value;
     if(courseIdFrom === "" || courseIdFrom === undefined){
@@ -16,7 +16,7 @@ function test(courseid){
     console.log(courseIdFrom)
     console.log(checkBox)
     console.log(courseid)
-    $.get(`/plugins/disp_cat/static/send_data/${courseIdFrom}/${courseid}/${checkBox}`)
+    $.get(`/plugins/disp_cat/static/import_tasks/${courseIdFrom}/${courseid}/${checkBox}`)
 }
 
 // Sets the content of the task modal according to the currently present tasks in task-list

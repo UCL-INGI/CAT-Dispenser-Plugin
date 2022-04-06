@@ -1,0 +1,28 @@
+{# This file is part of INGInious. See the LICENSE and the COPYRIGHTS files for #}
+{# more information about the licensing of this file. #}
+
+<div class="modal fade" id="importTaskModal" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Importer les exercices d'un autre cours</h3>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body list-group">
+                <h4>Code du cours d'origine</h4>
+                <div>
+                    <input type="text" class="form-control" id="course_id_from" placeholder="Original Course ID (if not a wooclap)">
+                </div>
+                <br>
+                <div>
+                    <input type="checkbox" id="wooclap" name="wooclap">
+                    <label for="wooclap">Is a Wooclap</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="add_existing_tasks" onclick="send_value('{{course.get_id()}}')" type="button" class="btn btn-success" data-dismiss="modal">{{_("Import")}}</button>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -8,6 +8,11 @@
         <span class="title"> {{ _("List of exercises") }}</span>
         <span style="display: none" class="divider"></span>
         <span>
+            <button onclick="" type="button" class="add_task btn close" data-toggle="modal" data-target="#importTaskModal">
+                <i class="fa fa-plus">Import</i>
+            </button>
+        </span>
+        <span>
             <button onclick="cat_disp_prepare_task_modal(this)" class="add_task btn close" data-toggle="modal" data-target="#addTaskModal">
                 <i class="fa fa-plus"></i>
             </button>
@@ -33,6 +38,7 @@
 </script>
 
 {% include "admin/modal_add.html" %}
+{% include "admin/modal_import.html" %}
 
 {# Templates for task items #}
 <div id="all_tasks" style="display: none">

@@ -31,12 +31,12 @@ class StaticMockPage(INGIniousPage):
     def POST(self, path):
         return self.GET(path)
 
-class Test(INGIniousPage):
+class ImportTasks(INGIniousPage):
     def GET(self,courseidfrom,courseid,iswooclap):
-        if(iswooclap == "true"):
-            iswooclap = True
-        else:
+        if(iswooclap == "false"):
             iswooclap = False
+        else:
+            iswooclap = True
         self.database.cat_info.delete_many({'courseid':courseid})
         self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid,'iswooclap':iswooclap})
         return "OK"
@@ -51,7 +51,7 @@ class CatDispenser(TaskDispenser):
         self.courseId = courseId
 
         #initial values
-        self.isWooclap = False 
+        self.isWooclap = True 
         self.originalCourse = -1
 
         for result in self.database.cat_info.find({"courseid":self.courseId}):
@@ -83,7 +83,10 @@ class CatDispenser(TaskDispenser):
         return
 
     def get_dispenser_data(self):
-        return self._data
+        datas = self._data.copy()
+        if "final" in self._data:
+            datas.remove("final") #A RETIRER POUR RETIRER FINAL
+        return datas
 
     def __vectorToStrJSON(self,array):
         strJSON = "["
@@ -172,10 +175,6 @@ class CatDispenser(TaskDispenser):
         :param task_data: a helper dictionary containing the human-readable name and download urls
         :return: HTML code for the task list edition page
         '''
-        if not self.isWooclap:
-            self.__sendDataToR()
-        else:
-            self.__sendDataToRWooclap()
         return template_helper.render("admin/task_list_edit.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                     dispenser_data=self._data, tasks=task_data)
 
@@ -201,14 +200,17 @@ class CatDispenser(TaskDispenser):
     '''
     C'EST ICI QUE LE CODE PASSE QUAND ON APPLIQUE LES CHANGEMENTS
     '''
-    @classmethod
-    def check_dispenser_data(cls, dispenser_data):
+    def check_dispenser_data(self, dispenser_data):
         '''
         Checks the dispenser data as formatted by the form from render_edit function
         :param dispenser_data: dispenser_data got from the web form (dispenser_structure_ js function)
         :return: A tuple (bool, List<str>). The first item is True if the dispenser_data got from the web form is valid
         The second takes a list of string containing error messages
         '''
+        if not self.isWooclap:
+            self.__sendDataToR()
+        else:
+            self.__sendDataToRWooclap()
         disp_task_list = json.loads(dispenser_data)
         valid = any(set([id_checker(taskid) for taskid in disp_task_list]))
         errors = [] if valid else ["Wrong task ids"]
@@ -262,13 +264,18 @@ class CatDispenser(TaskDispenser):
             responseJSON = json.loads(response.text)
             nextQuestion = responseJSON["index"][0]
             self.score = responseJSON["score"][0]
+            self.database.cat_score.delete_many({'username':user})
+            self.database.cat_score.insert_one({'username':user,'score':self.score})
             if nextQuestion == -1:
-                questionsId = []
                 self.finalScore = True
+                temp = self.__getTasksName(questionsId)
+                if "final" in self._data:
+                    temp.append("final")    #A MODIFIER POUR RETIRER FINAL
+                ret2[user] = temp
             else :
                 #questionsId = [nextQuestion]       # Only last question displayed
                 questionsId.append(nextQuestion)    # All Questions displayed
-            ret2[user] = self.__getTasksName(questionsId)
+                ret2[user] = self.__getTasksName(questionsId)
         return ret2
 
     def get_ordered_tasks(self):
@@ -301,11 +308,11 @@ def task_accessibility(course, task, default_value, database, user_manager):
     if nbr_submissions > 0 and tried:
         return AccessibleTime(False)
     else:
-        return default_value
+        return AccessibleTime(True) #A MODIFIER POUR RETIRER FINAL (mettre default_value)
 
 def init(plugin_manager, course_factory, client, plugin_config):
     # TODO: Replace by shared static middleware and let webserver serve the files
-    plugin_manager.add_page('/plugins/disp_cat/static/send_data/<courseidfrom>/<courseid>/<iswooclap>',Test.as_view('catdispensertest'))
+    plugin_manager.add_page('/plugins/disp_cat/static/import_tasks/<courseidfrom>/<courseid>/<iswooclap>',ImportTasks.as_view('catdispensertest'))
     plugin_manager.add_page('/plugins/disp_cat/static/<path:path>', StaticMockPage.as_view("catdispenserstaticpage"))
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/admin.js")
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/student.js")
