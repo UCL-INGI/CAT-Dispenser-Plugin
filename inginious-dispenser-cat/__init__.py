@@ -11,6 +11,7 @@ import requests
 
 from collections import OrderedDict
 from flask import send_from_directory
+from datetime import datetime
 
 from inginious.common.base import id_checker
 from inginious.frontend.pages.utils import INGIniousPage
@@ -40,6 +41,20 @@ class ImportTasks(INGIniousPage):
         self.database.cat_info.delete_many({'courseid':courseid})
         self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid,'iswooclap':iswooclap})
         return "OK"
+
+class ResetTasks(INGIniousPage):
+    def GET(self,course_id,username):
+        date_archive = str(datetime.now())
+        for line in self.database.user_tasks.find({'username':username,'courseid':course_id}):
+            line['date'] = date_archive
+            self.database.user_tasks_archive.insert_one(line)
+        self.database.user_tasks.delete_many({'username':username,'courseid':course_id})
+
+        for line in self.database.submissions.find({'username':username,'courseid':course_id}):
+            line['date'] = date_archive
+            self.database.submissions_archive.insert_one(line)
+        self.database.submissions.delete_many({'username':username,'courseid':course_id})
+        return "OK"
     
 class CatDispenser(TaskDispenser):
     def __init__(self, task_list_func, dispenser_data, database, courseId):
@@ -62,6 +77,7 @@ class CatDispenser(TaskDispenser):
         self._data = dispenser_data
         self.score = -1
         self.finalScore = False
+        self.username = "None"
 
     @classmethod
     def get_id(cls):
@@ -187,11 +203,18 @@ class CatDispenser(TaskDispenser):
         :return: HTML code for the student task list page
         '''
         score = ""
+        button_reset = "None"
         if self.score != -1 and not self.finalScore:
             score = "Actual Grade: " + str(round(self.score, 2)) + " %"
         elif self.score != -1 and self.finalScore:
+            button_reset = "block"
             score = "Final Grade: "  + str(round(self.score, 2)) + " %"
-        datas = {"data":self._data,"score":score}
+
+        if "final" in self._data and "final" in tasks_data and not tasks_data["final"]["succeeded"]: #Force a remplir le formulaire
+            score = ""
+            button_reset = "None"
+
+        datas = {"data":self._data,"score":score,"reset":button_reset,"username":self.username}
         
         return template_helper.render("student/task_list.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                       tasks=self._task_list_func(), tasks_data=tasks_data, tag_filter_list=tag_list,
@@ -256,6 +279,7 @@ class CatDispenser(TaskDispenser):
         '''
         ret2 = {}
         for user in usernames:
+            self.username = user
             questions = self.__getAlreadyAnswered(user)
             questionsId = questions[0]
             responses = questions[1]
@@ -273,6 +297,7 @@ class CatDispenser(TaskDispenser):
                     temp.append("final")    #A MODIFIER POUR RETIRER FINAL
                 ret2[user] = temp
             else :
+                self.finalScore = False
                 #questionsId = [nextQuestion]       # Only last question displayed
                 questionsId.append(nextQuestion)    # All Questions displayed
                 ret2[user] = self.__getTasksName(questionsId)
@@ -313,6 +338,7 @@ def task_accessibility(course, task, default_value, database, user_manager):
 def init(plugin_manager, course_factory, client, plugin_config):
     # TODO: Replace by shared static middleware and let webserver serve the files
     plugin_manager.add_page('/plugins/disp_cat/static/import_tasks/<courseidfrom>/<courseid>/<iswooclap>',ImportTasks.as_view('catdispensertest'))
+    plugin_manager.add_page('/plugins/disp_cat/static/reset_tasks/<course_id>/<username>',ResetTasks.as_view('catdispenserreset'))
     plugin_manager.add_page('/plugins/disp_cat/static/<path:path>', StaticMockPage.as_view("catdispenserstaticpage"))
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/admin.js")
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/student.js")

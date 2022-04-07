@@ -16,3 +16,8 @@ function task_list_dropdown(header) {
         content_div.slideDown('fast')
     }
 }
+
+function reset(course_id,username){
+    $.get(`/plugins/disp_cat/static/reset_tasks/${course_id}/${username}`)
+    window.location.reload()
+}

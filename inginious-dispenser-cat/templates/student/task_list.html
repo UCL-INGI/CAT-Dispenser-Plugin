@@ -48,5 +48,6 @@
             {% endif %}
         {% endfor %}
     </div>
+    <button id="reset"  onclick="reset('{{course.get_id()}}','{{dispenser_data.username}}')" type="button" class="btn btn-danger" style="display:{{ dispenser_data.reset }}">Reset</button>
 </div>
 <h1>{{ dispenser_data.score }}</h1>
