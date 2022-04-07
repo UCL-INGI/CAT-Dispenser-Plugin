@@ -54,6 +54,11 @@ class ResetTasks(INGIniousPage):
             line['date'] = date_archive
             self.database.submissions_archive.insert_one(line)
         self.database.submissions.delete_many({'username':username,'courseid':course_id})
+
+        for line in self.database.cat_score.find({'username':username,'courseid':course_id}):
+            line['date'] = date_archive
+            self.database.cat_score_archive.insert_one(line)
+        self.database.cat_score.delete_many({'username':username,'courseid':course_id})
         return "OK"
     
 class CatDispenser(TaskDispenser):
@@ -288,8 +293,6 @@ class CatDispenser(TaskDispenser):
             responseJSON = json.loads(response.text)
             nextQuestion = responseJSON["index"][0]
             self.score = responseJSON["score"][0]
-            self.database.cat_score.delete_many({'username':user})
-            self.database.cat_score.insert_one({'username':user,'score':self.score})
             if nextQuestion == -1:
                 self.finalScore = True
                 temp = self.__getTasksName(questionsId)
@@ -301,6 +304,8 @@ class CatDispenser(TaskDispenser):
                 #questionsId = [nextQuestion]       # Only last question displayed
                 questionsId.append(nextQuestion)    # All Questions displayed
                 ret2[user] = self.__getTasksName(questionsId)
+            self.database.cat_score.delete_many({'username':user,"courseid":self.courseId})
+            self.database.cat_score.insert_one({'username':user,"courseid":self.courseId,'score':self.score,"finalscore":self.finalScore})
         return ret2
 
     def get_ordered_tasks(self):
