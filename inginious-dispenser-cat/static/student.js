@@ -18,6 +18,7 @@ function task_list_dropdown(header) {
 }
 
 function reset(course_id,username){
-    $.get(`/plugins/disp_cat/static/reset_tasks/${course_id}/${username}`)
-    window.location.reload()
+    $.get(`/plugins/disp_cat/static/reset_tasks/${course_id}/${username}`).then((result)=>{
+        window.location.reload()
+    })
 }
