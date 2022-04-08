@@ -216,7 +216,6 @@ class CatDispenser(TaskDispenser):
             score = "Final Grade: "  + str(round(self.score, 2)) + " %"
 
         if "final" in self._data and "final" in tasks_data and not tasks_data["final"]["succeeded"]: #Force a remplir le formulaire
-            score = ""
             button_reset = "None"
 
         datas = {"data":self._data,"score":score,"reset":button_reset,"username":self.username}
