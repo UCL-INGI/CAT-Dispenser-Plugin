@@ -99,6 +99,7 @@ class CatDispenser(TaskDispenser):
         '''
         return "Computerized Adapative Testing dispenser"
 
+    #Can be remove?
     def add_database(self,database):
         self.database = database
         return
@@ -304,7 +305,8 @@ class CatDispenser(TaskDispenser):
                 questionsId.append(nextQuestion)    # All Questions displayed
                 ret2[user] = self.__getTasksName(questionsId)
             self.database.cat_score.delete_many({'username':user,"courseid":self.courseId})
-            self.database.cat_score.insert_one({'username':user,"courseid":self.courseId,'score':self.score,"finalscore":self.finalScore})
+            print("NBR question:" + str(len(ret2[user])))
+            self.database.cat_score.insert_one({'username':user,"courseid":self.courseId,'score':self.score,"finalscore":self.finalScore,"nombrequestions":len(ret2[user])})
         return ret2
 
     def get_ordered_tasks(self):
