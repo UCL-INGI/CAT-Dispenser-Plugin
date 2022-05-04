@@ -105,10 +105,15 @@ class CatDispenser(TaskDispenser):
         return
 
     def get_dispenser_data(self):
-        datas = self._data.copy()
-        if "final" in self._data:
-            datas.remove("final") #A RETIRER POUR RETIRER FINAL
-        return datas
+        print("DATA?????? " + self._data)
+        try:
+            datas = self._data.copy()
+        except:
+            return self._data
+        else:
+            if "final" in self._data:
+                datas.remove("final")           #A RETIRER POUR RETIRER FINAL
+            return datas
 
     def __vectorToStrJSON(self,array):
         strJSON = "["
