@@ -105,7 +105,6 @@ class CatDispenser(TaskDispenser):
         return
 
     def get_dispenser_data(self):
-        print("DATA?????? " + self._data)
         try:
             datas = self._data.copy()
         except:
