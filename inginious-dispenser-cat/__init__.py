@@ -33,6 +33,9 @@ class StaticMockPage(INGIniousPage):
 
 class ImportTasks(INGIniousPage):
     def GET(self,courseidfrom,courseid):
+        '''
+        Copy tasks from <courseidfrom> to <courseid>
+        '''
         self.database.cat_info.delete_many({'courseid':courseid})
         self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid})
 
@@ -44,8 +47,14 @@ class ImportTasks(INGIniousPage):
         else:
             return "Error in import, please verify your course id"
 
+
 class ResetTasks(INGIniousPage):
     def GET(self,course_id,username):
+        '''
+        Archive everything for <username>
+        :param course_id: the id of the course
+        :param username: the username of the user we want to reset
+        '''
         date_archive = str(datetime.now())
         for line in self.database.user_tasks.find({'username':username,'courseid':course_id}):
             line['date'] = date_archive
@@ -104,6 +113,9 @@ class CatDispenser(TaskDispenser):
         return "Computerized Adapative Testing dispenser"
 
     def get_dispenser_data(self):
+        '''
+        :return: datas of the dispenser
+        '''
         try:
             datas = self._data.copy()
         except:
@@ -112,6 +124,10 @@ class CatDispenser(TaskDispenser):
             return datas
 
     def __array_to_str_json(self,array):
+        '''
+        :param array: an array of elements
+        :return: the json format (in string) of array
+        '''
         strJSON = "["
         for i in range(len(array)):
             line = "["
@@ -124,6 +140,9 @@ class CatDispenser(TaskDispenser):
         return strJSON
     
     def get_users(self):
+        '''
+        :return: an array of usernames of user that participated to at least one task of <original_course>
+        '''
         users = []
         for val in self.database.user_tasks.find({'courseid':self.original_course}):
             user = val['username']
@@ -132,9 +151,13 @@ class CatDispenser(TaskDispenser):
         return(users)
 
     def __send_data_to_r(self):
+        '''
+        Construct a matrix of grade where every line is a student and every column is a question of <original_course>
+        Send this matrix to R as a json
+        '''
         users = self.get_users()
         tasks = self.get_dispenser_data()
-        users_datas = []
+        users_datas = []     # The Matrix of grade
         for user in users :
             user_data = []
             for task in tasks :
@@ -155,9 +178,6 @@ class CatDispenser(TaskDispenser):
         newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         requests.post("http://"+MYIP+":8766/newExam",data=json.dumps({'data': strJSON,"index":self.course_id}),headers=newHeaders)
 
-    '''
-    Quand on arrive sur la liste des exo ET que on applique les changements
-    '''
     def render_edit(self, template_helper, course, task_data):
         '''
         :param template_helper: the template_helper singleton
@@ -204,16 +224,28 @@ class CatDispenser(TaskDispenser):
         return disp_task_list if valid else None, errors
 
     def __get_task_name(self,id):
+        '''
+        :param id: id of the task
+        :return: The name of task at id
+        '''
         tasks = self.get_dispenser_data()
-        return tasks[id-1]
+        return tasks[id]
 
     def __get_tasks_name(self,tasks_ids):
+        '''
+        :param tasks_ids: list of ids of tasks
+        :return: A list of the name of tasks_ids
+        '''
         tasks = []
         for id in tasks_ids:
-            tasks.append(self.__get_task_name(id))
+            tasks.append(self.__get_task_name(id-1))
         return tasks
 
     def __get_task_id(self,task):
+        '''
+        :param task: A task as defined in the database (user_tasks)
+        :return: The id of the task
+        '''
         i = 1
         tasks = self.get_dispenser_data()
         for t in tasks:
@@ -223,6 +255,10 @@ class CatDispenser(TaskDispenser):
         return -1
 
     def __get_already_answered(self,username):
+        '''
+        :param username: A username (string)
+        :return: The list of all ids of all questions that <username> already answered
+        '''
         tasks_ids = []
         grades = []
         for val in self.database.user_tasks.find({'courseid':self.course_id,'username':username}):
@@ -285,6 +321,7 @@ class CatDispenser(TaskDispenser):
             return len(tasks)
     
 def task_accessibility(course, task, default_value, database, user_manager):
+    """ Set unaccessible task that user already tried once """
     dispenser = course.get_task_dispenser().get_id()
     if dispenser != "cat_dispenser":
         return default_value
@@ -301,7 +338,7 @@ def task_accessibility(course, task, default_value, database, user_manager):
     if nbr_submissions > 0 and tried:
         return AccessibleTime(False)
     else:
-        return AccessibleTime(True)
+        return default_value
 
 def init(plugin_manager, course_factory, client, plugin_config):
     plugin_manager.add_page('/plugins/disp_cat/static/import_tasks/<courseidfrom>/<courseid>',ImportTasks.as_view('catdispensertest'))
