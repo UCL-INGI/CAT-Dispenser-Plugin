@@ -8,15 +8,14 @@
 *************************/
 
 function send_value(courseid){
-    var checkBox = document.getElementById("wooclap").checked;
+    //var checkBox = document.getElementById("wooclap").checked;
     var courseIdFrom = document.getElementById("course_id_from").value;
     if(courseIdFrom === "" || courseIdFrom === undefined){
         courseIdFrom = "undefined"
     }
     console.log(courseIdFrom)
-    console.log(checkBox)
     console.log(courseid)
-    $.get(`/plugins/disp_cat/static/import_tasks/${courseIdFrom}/${courseid}/${checkBox}`, function(ret) {
+    $.get(`/plugins/disp_cat/static/import_tasks/${courseIdFrom}/${courseid}`, function(ret) {
         location.reload(true);
         alert(ret)
     })

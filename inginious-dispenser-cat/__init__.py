@@ -23,7 +23,6 @@ __version__ = "0.1.dev0"
 PATH_TO_PLUGIN = os.path.abspath(os.path.dirname(__file__))
 PATH_TO_TEMPLATES = os.path.join(PATH_TO_PLUGIN, "templates")
 PATH_TO_TASKS = "/home/lethblak/Unif/Memoire/INGInious/INGInious/tasks/"
-#MYIP="109.136.115.168"
 MYIP="127.0.0.1"
 
 class StaticMockPage(INGIniousPage):
@@ -34,14 +33,9 @@ class StaticMockPage(INGIniousPage):
         return self.GET(path)
 
 class ImportTasks(INGIniousPage):
-    def GET(self,courseidfrom,courseid,iswooclap):
-
-        if(iswooclap == "false"):
-            iswooclap = False
-        else:
-            iswooclap = True
+    def GET(self,courseidfrom,courseid):
         self.database.cat_info.delete_many({'courseid':courseid})
-        self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid,'iswooclap':iswooclap})
+        self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid})
         
         for line in self.database.submissions.find({'courseid':courseid}):
             line['courseid'] = courseid
@@ -50,10 +44,8 @@ class ImportTasks(INGIniousPage):
         command = "cp -nr " + PATH_TO_TASKS + str(courseidfrom) +"/*" + " " + PATH_TO_TASKS + str(courseid)
         ret = os.system(command)
         if ret == 0:
-            print("HERE")
             return "Successfully imported"
         else:
-            print("ELSE")
             return "Error in import, please verify your course id"
 
 class ResetTasks(INGIniousPage):
@@ -83,21 +75,16 @@ class CatDispenser(TaskDispenser):
         '''
         self.database = database
         self.courseId = courseId
-
-        #initial values
-        self.isWooclap = True
         self.originalCourse = -1
 
         cat_info = self.database.cat_info.find({"courseid":self.courseId})
         i = 0
         for result in cat_info:
             self.originalCourse = result['courseidfrom']
-            self.isWooclap = result['iswooclap']
             i += 1
 
-        if i == 0: #no info stores => tasks of his own course
+        if i == 0: # no info stores => tasks of his own course
             self.originalCourse = self.courseId
-            self.isWooclap = False
         
         self._task_list_func = task_list_func
         self._data = dispenser_data
@@ -131,8 +118,6 @@ class CatDispenser(TaskDispenser):
         except:
             return self._data
         else:
-            if "final" in self._data:
-                datas.remove("final")           #A RETIRER POUR RETIRER FINAL
             return datas
 
     def __vectorToStrJSON(self,array):
@@ -172,18 +157,6 @@ class CatDispenser(TaskDispenser):
         #UGH WTF?
         return(self.get_dispenser_data())
 
-    def __sendDataToRWooclap(self):
-        tasks = self.getTasks() #keep order
-        averageVector = []
-        for task in tasks:
-            average = -1
-            for stat in self.database.cat_stats.find({'courseid':self.courseId,'taskid':task}):
-                average = stat['average']
-            averageVector.append(average)
-        strJSON = self.__vectorToStrJSON(averageVector)
-        newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = requests.post("http://"+MYIP+":8766/newExamWooclap",data=json.dumps({'data': strJSON,"index":self.courseId}),headers=newHeaders)
-
     def __sendDataToR(self):
         users = self.getUsers()
         tasks = self.getTasks()
@@ -222,10 +195,7 @@ class CatDispenser(TaskDispenser):
         :param task_data: a helper dictionary containing the human-readable name and download urls
         :return: HTML code for the task list edition page
         '''
-        if not self.isWooclap:
-            self.__sendDataToR()
-        else:
-            self.__sendDataToRWooclap()
+        self.__sendDataToR()
         return template_helper.render("admin/task_list_edit.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                     dispenser_data=self._data, tasks=task_data)
 
@@ -242,11 +212,8 @@ class CatDispenser(TaskDispenser):
         if self.score != -1 and not self.finalScore:
             score = "Actual Grade: " + str(round(self.score, 2)) + " %"
         elif self.score != -1 and self.finalScore:
-            button_reset = "block"
+            #button_reset = "block"                             UNCOMMENT FOR A RESET BUTTON (INDIVIDUAL)
             score = "Final Grade: "  + str(round(self.score, 2)) + " %"
-
-        if "final" in self._data and "final" in tasks_data and not tasks_data["final"]["succeeded"]: #Force a remplir le formulaire
-            button_reset = "None"
 
         datas = {"data":self._data,"score":score,"reset":button_reset,"username":self.username}
         
@@ -322,13 +289,10 @@ class CatDispenser(TaskDispenser):
                 if nextQuestion == -1:
                     self.finalScore = True
                     temp = self.__getTasksName(questionsId)
-                    if "final" in self._data:
-                        temp.append("final")    #A MODIFIER POUR RETIRER FINAL
                     ret2[user] = temp
                 else :
                     self.finalScore = False
-                    #questionsId = [nextQuestion]       # Only last question displayed
-                    questionsId.append(nextQuestion)    # All Questions displayed
+                    questionsId.append(nextQuestion)
                     ret2[user] = self.__getTasksName(questionsId)
                 self.database.cat_score.delete_many({'username':user,"courseid":self.courseId})
                 print("NBR question:" + str(len(ret2[user])))
@@ -367,11 +331,10 @@ def task_accessibility(course, task, default_value, database, user_manager):
     if nbr_submissions > 0 and tried:
         return AccessibleTime(False)
     else:
-        return AccessibleTime(True) #A MODIFIER POUR RETIRER FINAL (mettre default_value)
+        return AccessibleTime(default_value)
 
 def init(plugin_manager, course_factory, client, plugin_config):
-    # TODO: Replace by shared static middleware and let webserver serve the files
-    plugin_manager.add_page('/plugins/disp_cat/static/import_tasks/<courseidfrom>/<courseid>/<iswooclap>',ImportTasks.as_view('catdispensertest'))
+    plugin_manager.add_page('/plugins/disp_cat/static/import_tasks/<courseidfrom>/<courseid>',ImportTasks.as_view('catdispensertest'))
     plugin_manager.add_page('/plugins/disp_cat/static/reset_tasks/<course_id>/<username>',ResetTasks.as_view('catdispenserreset'))
     plugin_manager.add_page('/plugins/disp_cat/static/<path:path>', StaticMockPage.as_view("catdispenserstaticpage"))
     plugin_manager.add_hook("javascript_header", lambda: "/plugins/disp_cat/static/admin.js")

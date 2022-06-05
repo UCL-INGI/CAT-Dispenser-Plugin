@@ -11,13 +11,9 @@
             <div class="modal-body list-group">
                 <h4>Code du cours d'origine</h4>
                 <div>
-                    <input type="text" class="form-control" id="course_id_from" placeholder="Original Course ID (if not a wooclap)">
+                    <input type="text" class="form-control" id="course_id_from" placeholder="Original Course ID">
                 </div>
                 <br>
-                <div>
-                    <input type="checkbox" id="wooclap" name="wooclap">
-                    <label for="wooclap">Is a Wooclap</label>
-                </div>
             </div>
             <div class="modal-footer">
                 <button id="add_existing_tasks" onclick="send_value('{{course.get_id()}}')" type="button" class="btn btn-success" data-dismiss="modal">{{_("Import")}}</button>
