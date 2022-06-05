@@ -6,7 +6,6 @@
 from cmath import nan
 import os 
 import json
-import random
 import requests
 
 from collections import OrderedDict
@@ -36,13 +35,10 @@ class ImportTasks(INGIniousPage):
     def GET(self,courseidfrom,courseid):
         self.database.cat_info.delete_many({'courseid':courseid})
         self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid})
-        
-        for line in self.database.submissions.find({'courseid':courseid}):
-            line['courseid'] = courseid
-            self.database.submissions.insert_one(line)
 
-        command = "cp -nr " + PATH_TO_TASKS + str(courseidfrom) +"/*" + " " + PATH_TO_TASKS + str(courseid)
+        command = "cp -nr " + PATH_TO_TASKS + str(courseidfrom) +"/*" + " " + PATH_TO_TASKS + str(courseid) #cp -nr <courseidfrom>/* <courseid>
         ret = os.system(command)
+
         if ret == 0:
             return "Successfully imported"
         else:
@@ -74,22 +70,22 @@ class CatDispenser(TaskDispenser):
         :param dispenser_data: the dispenser data as written in course.yaml
         '''
         self.database = database
-        self.courseId = courseId
-        self.originalCourse = -1
+        self.course_id = courseId
+        self.original_course = -1
 
-        cat_info = self.database.cat_info.find({"courseid":self.courseId})
+        cat_info = self.database.cat_info.find({"courseid":self.course_id})
         i = 0
         for result in cat_info:
-            self.originalCourse = result['courseidfrom']
+            self.original_course = result['courseidfrom']
             i += 1
 
         if i == 0: # no info stores => tasks of his own course
-            self.originalCourse = self.courseId
+            self.original_course = self.course_id
         
         self._task_list_func = task_list_func
         self._data = dispenser_data
         self.score = -1
-        self.finalScore = False
+        self.final_score = False
         self.username = "None"
 
     @classmethod
@@ -107,11 +103,6 @@ class CatDispenser(TaskDispenser):
         '''
         return "Computerized Adapative Testing dispenser"
 
-    #Can be remove?
-    def add_database(self,database):
-        self.database = database
-        return
-
     def get_dispenser_data(self):
         try:
             datas = self._data.copy()
@@ -120,15 +111,7 @@ class CatDispenser(TaskDispenser):
         else:
             return datas
 
-    def __vectorToStrJSON(self,array):
-        strJSON = "["
-        for i in range(len(array)):
-            line = str(array[i]) + ","
-            strJSON += line
-        strJSON = strJSON[:-1] + "]"        #remove last , and add ]
-        return strJSON
-
-    def __arrayToStrJSON(self,array):
+    def __array_to_str_json(self,array):
         strJSON = "["
         for i in range(len(array)):
             line = "["
@@ -140,50 +123,37 @@ class CatDispenser(TaskDispenser):
         strJSON = strJSON[:-1] + "]"        #remove last , and add ]
         return strJSON
     
-    def getUsers(self):
+    def get_users(self):
         users = []
-        for val in self.database.user_tasks.find({'courseid':self.originalCourse}):
+        for val in self.database.user_tasks.find({'courseid':self.original_course}):
             user = val['username']
             if(user not in users):
                 users.append(user)
         return(users)
-    
-    def getTasks(self):
-        tasks = []
-        for val in self.database.user_tasks.find({'courseid':self.originalCourse}):
-            task = val['taskid']
-            if(task not in tasks):
-                tasks.append(task)
-        #UGH WTF?
-        return(self.get_dispenser_data())
 
-    def __sendDataToR(self):
-        users = self.getUsers()
-        tasks = self.getTasks()
-        usersDatas = []
+    def __send_data_to_r(self):
+        users = self.get_users()
+        tasks = self.get_dispenser_data()
+        users_datas = []
         for user in users :
-            userData = []
+            user_data = []
             for task in tasks :
                 grade = -1
-                for val in self.database.user_tasks.find({'courseid':self.originalCourse,'username':user,'taskid':task}):
+                for val in self.database.user_tasks.find({'courseid':self.original_course,'username':user,'taskid':task}):
                     if val['tried'] > 0:
                         if val['succeeded']:
                             grade = 1
                         else:
                             grade = 0
-                userData.append(grade)
+                user_data.append(grade)
             isOnlyNA = True
-            for gradeCheck in userData:
+            for gradeCheck in user_data:
                 if gradeCheck != -1 : isOnlyNA = False
             if not isOnlyNA:
-                usersDatas.append(userData)
-        strJSON = self.__arrayToStrJSON(usersDatas)
+                users_datas.append(user_data)
+        strJSON = self.__array_to_str_json(users_datas)
         newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = requests.post("http://"+MYIP+":8766/newExam",data=json.dumps({'data': strJSON,"index":self.courseId}),headers=newHeaders)
-
-    '''def __deleteDataToR(self):
-        newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        response = requests.delete("http://"+MYIP":8766/deleteItemBank",data=json.dumps({'data': self.courseId}),headers=newHeaders)'''
+        requests.post("http://"+MYIP+":8766/newExam",data=json.dumps({'data': strJSON,"index":self.course_id}),headers=newHeaders)
 
     '''
     Quand on arrive sur la liste des exo ET que on applique les changements
@@ -195,7 +165,7 @@ class CatDispenser(TaskDispenser):
         :param task_data: a helper dictionary containing the human-readable name and download urls
         :return: HTML code for the task list edition page
         '''
-        self.__sendDataToR()
+        self.__send_data_to_r()
         return template_helper.render("admin/task_list_edit.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                     dispenser_data=self._data, tasks=task_data)
 
@@ -209,9 +179,9 @@ class CatDispenser(TaskDispenser):
         '''
         score = ""
         button_reset = "None"
-        if self.score != -1 and not self.finalScore:
+        if self.score != -1 and not self.final_score:
             score = "Actual Grade: " + str(round(self.score, 2)) + " %"
-        elif self.score != -1 and self.finalScore:
+        elif self.score != -1 and self.final_score:
             #button_reset = "block"                             UNCOMMENT FOR A RESET BUTTON (INDIVIDUAL)
             score = "Final Grade: "  + str(round(self.score, 2)) + " %"
 
@@ -221,9 +191,6 @@ class CatDispenser(TaskDispenser):
                                       tasks=self._task_list_func(), tasks_data=tasks_data, tag_filter_list=tag_list,
                                       dispenser_data=datas)
 
-    '''
-    C'EST ICI QUE LE CODE PASSE QUAND ON APPLIQUE LES CHANGEMENTS
-    '''
     def check_dispenser_data(self, dispenser_data):
         '''
         Checks the dispenser data as formatted by the form from render_edit function
@@ -236,17 +203,17 @@ class CatDispenser(TaskDispenser):
         errors = [] if valid else ["Wrong task ids"]
         return disp_task_list if valid else None, errors
 
-    def __getTaskName(self,id):
+    def __get_task_name(self,id):
         tasks = self.get_dispenser_data()
         return tasks[id-1]
 
-    def __getTasksName(self,tasksIds):
+    def __get_tasks_name(self,tasks_ids):
         tasks = []
-        for id in tasksIds:
-            tasks.append(self.__getTaskName(id))
+        for id in tasks_ids:
+            tasks.append(self.__get_task_name(id))
         return tasks
 
-    def __getTaskId(self,task):
+    def __get_task_id(self,task):
         i = 1
         tasks = self.get_dispenser_data()
         for t in tasks:
@@ -255,18 +222,18 @@ class CatDispenser(TaskDispenser):
             i = i +1
         return -1
 
-    def __getAlreadyAnswered(self,username):
-        tasksIds = []
+    def __get_already_answered(self,username):
+        tasks_ids = []
         grades = []
-        for val in self.database.user_tasks.find({'courseid':self.courseId,'username':username}):
+        for val in self.database.user_tasks.find({'courseid':self.course_id,'username':username}):
             task = val['taskid']
-            taskId = self.__getTaskId(task)
-            if taskId != -1 and val['tried'] != 0:
-                tasksIds.append(taskId)
+            taskid = self.__get_task_id(task)
+            if taskid != -1 and val['tried'] != 0:
+                tasks_ids.append(taskid)
                 grades.append(val['grade']/100)
-        if len(tasksIds) == 0:
+        if len(tasks_ids) == 0:
             return([],-1)
-        return (tasksIds,grades)
+        return (tasks_ids,grades)
 
     def get_user_task_list(self, usernames):
         '''
@@ -274,32 +241,35 @@ class CatDispenser(TaskDispenser):
         :param usernames: the list of users usernames who the user task list is needed for
         :return: a dictionary with username as key and the user task list as value
         '''
-        ret2 = {}
+        values = {}
         for user in usernames:
             try:
                 self.username = user
-                questions = self.__getAlreadyAnswered(user)
-                questionsId = questions[0]
+                questions = self.__get_already_answered(user)
+                questions_id = questions[0]
                 responses = questions[1]
+
                 newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-                response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.courseId,'alreadyAnswered':questionsId,'responseList':responses}),headers=newHeaders)
+                response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.course_id,'alreadyAnswered':questions_id,'responseList':responses}),headers=newHeaders)
                 responseJSON = json.loads(response.text)
+
                 nextQuestion = responseJSON["index"][0]
                 self.score = responseJSON["score"][0]
-                if nextQuestion == -1:
-                    self.finalScore = True
-                    temp = self.__getTasksName(questionsId)
-                    ret2[user] = temp
+
+                if nextQuestion == -1: #No new question to ask
+                    self.final_score = True
+                    temp = self.__get_tasks_name(questions_id)
+                    values[user] = temp
                 else :
-                    self.finalScore = False
-                    questionsId.append(nextQuestion)
-                    ret2[user] = self.__getTasksName(questionsId)
-                self.database.cat_score.delete_many({'username':user,"courseid":self.courseId})
-                print("NBR question:" + str(len(ret2[user])))
-                self.database.cat_score.insert_one({'username':user,"courseid":self.courseId,'score':self.score,"finalscore":self.finalScore,"nombrequestions":len(ret2[user])})
+                    self.final_score = False
+                    questions_id.append(nextQuestion)
+                    values[user] = self.__get_tasks_name(questions_id)
+
+                self.database.cat_score.delete_many({'username':user,"courseid":self.course_id})
+                self.database.cat_score.insert_one({'username':user,"courseid":self.course_id,'score':self.score,"finalscore":self.final_score,"nombrequestions":len(values[user])})
             except:
-                ret2[user] = []
-        return ret2
+                values[user] = []
+        return values
 
     def get_ordered_tasks(self):
         """ Returns a serialized version of the tasks structure as an OrderedDict"""
@@ -331,7 +301,7 @@ def task_accessibility(course, task, default_value, database, user_manager):
     if nbr_submissions > 0 and tried:
         return AccessibleTime(False)
     else:
-        return AccessibleTime(default_value)
+        return AccessibleTime(True)
 
 def init(plugin_manager, course_factory, client, plugin_config):
     plugin_manager.add_page('/plugins/disp_cat/static/import_tasks/<courseidfrom>/<courseid>',ImportTasks.as_view('catdispensertest'))
