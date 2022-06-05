@@ -137,7 +137,11 @@ class CatDispenser(TaskDispenser):
             line += "]"
             strJSON += line + ","
         strJSON = strJSON[:-1] + "]"        #remove last , and add ]
-        return strJSON
+
+        if strJSON == "]": #Avoid error when removing ',' if array is empty
+            return "[]"
+        else:
+            return strJSON
     
     def get_users(self):
         '''
