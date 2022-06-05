@@ -16,7 +16,19 @@ function send_value(courseid){
     console.log(courseIdFrom)
     console.log(checkBox)
     console.log(courseid)
-    $.get(`/plugins/disp_cat/static/import_tasks/${courseIdFrom}/${courseid}/${checkBox}`)
+    $.get(`/plugins/disp_cat/static/import_tasks/${courseIdFrom}/${courseid}/${checkBox}`, function(ret) {
+        location.reload(true);
+        alert(ret)
+    })
+}
+
+function add_all(target){
+    $("div#modal_task_list>div").each(function(){
+        const displayed = $(this).css("display");
+        if(displayed !== "none"){
+            cat_disp_select_task(this)
+        }
+    })
 }
 
 // Sets the content of the task modal according to the currently present tasks in task-list

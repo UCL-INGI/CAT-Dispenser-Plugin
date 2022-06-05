@@ -22,6 +22,7 @@ __version__ = "0.1.dev0"
 
 PATH_TO_PLUGIN = os.path.abspath(os.path.dirname(__file__))
 PATH_TO_TEMPLATES = os.path.join(PATH_TO_PLUGIN, "templates")
+PATH_TO_TASKS = "/home/lethblak/Unif/Memoire/INGInious/INGInious/tasks/"
 #MYIP="109.136.115.168"
 MYIP="127.0.0.1"
 
@@ -34,13 +35,26 @@ class StaticMockPage(INGIniousPage):
 
 class ImportTasks(INGIniousPage):
     def GET(self,courseidfrom,courseid,iswooclap):
+
         if(iswooclap == "false"):
             iswooclap = False
         else:
             iswooclap = True
         self.database.cat_info.delete_many({'courseid':courseid})
         self.database.cat_info.insert_one({'courseidfrom':courseidfrom,'courseid':courseid,'iswooclap':iswooclap})
-        return "OK"
+        
+        for line in self.database.submissions.find({'courseid':courseid}):
+            line['courseid'] = courseid
+            self.database.submissions.insert_one(line)
+
+        command = "cp -nr " + PATH_TO_TASKS + str(courseidfrom) +"/*" + " " + PATH_TO_TASKS + str(courseid)
+        ret = os.system(command)
+        if ret == 0:
+            print("HERE")
+            return "Successfully imported"
+        else:
+            print("ELSE")
+            return "Error in import, please verify your course id"
 
 class ResetTasks(INGIniousPage):
     def GET(self,course_id,username):
@@ -71,12 +85,19 @@ class CatDispenser(TaskDispenser):
         self.courseId = courseId
 
         #initial values
-        self.isWooclap = True 
+        self.isWooclap = True
         self.originalCourse = -1
 
-        for result in self.database.cat_info.find({"courseid":self.courseId}):
+        cat_info = self.database.cat_info.find({"courseid":self.courseId})
+        i = 0
+        for result in cat_info:
             self.originalCourse = result['courseidfrom']
             self.isWooclap = result['iswooclap']
+            i += 1
+
+        if i == 0: #no info stores => tasks of his own course
+            self.originalCourse = self.courseId
+            self.isWooclap = False
         
         self._task_list_func = task_list_func
         self._data = dispenser_data
@@ -201,6 +222,10 @@ class CatDispenser(TaskDispenser):
         :param task_data: a helper dictionary containing the human-readable name and download urls
         :return: HTML code for the task list edition page
         '''
+        if not self.isWooclap:
+            self.__sendDataToR()
+        else:
+            self.__sendDataToRWooclap()
         return template_helper.render("admin/task_list_edit.html", template_folder=PATH_TO_TEMPLATES, course=course,
                                     dispenser_data=self._data, tasks=task_data)
 
@@ -239,10 +264,6 @@ class CatDispenser(TaskDispenser):
         :return: A tuple (bool, List<str>). The first item is True if the dispenser_data got from the web form is valid
         The second takes a list of string containing error messages
         '''
-        if not self.isWooclap:
-            self.__sendDataToR()
-        else:
-            self.__sendDataToRWooclap()
         disp_task_list = json.loads(dispenser_data)
         valid = any(set([id_checker(taskid) for taskid in disp_task_list]))
         errors = [] if valid else ["Wrong task ids"]
@@ -288,29 +309,32 @@ class CatDispenser(TaskDispenser):
         '''
         ret2 = {}
         for user in usernames:
-            self.username = user
-            questions = self.__getAlreadyAnswered(user)
-            questionsId = questions[0]
-            responses = questions[1]
-            newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-            response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.courseId,'alreadyAnswered':questionsId,'responseList':responses}),headers=newHeaders)
-            responseJSON = json.loads(response.text)
-            nextQuestion = responseJSON["index"][0]
-            self.score = responseJSON["score"][0]
-            if nextQuestion == -1:
-                self.finalScore = True
-                temp = self.__getTasksName(questionsId)
-                if "final" in self._data:
-                    temp.append("final")    #A MODIFIER POUR RETIRER FINAL
-                ret2[user] = temp
-            else :
-                self.finalScore = False
-                #questionsId = [nextQuestion]       # Only last question displayed
-                questionsId.append(nextQuestion)    # All Questions displayed
-                ret2[user] = self.__getTasksName(questionsId)
-            self.database.cat_score.delete_many({'username':user,"courseid":self.courseId})
-            print("NBR question:" + str(len(ret2[user])))
-            self.database.cat_score.insert_one({'username':user,"courseid":self.courseId,'score':self.score,"finalscore":self.finalScore,"nombrequestions":len(ret2[user])})
+            try:
+                self.username = user
+                questions = self.__getAlreadyAnswered(user)
+                questionsId = questions[0]
+                responses = questions[1]
+                newHeaders = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+                response = requests.post("http://"+MYIP+":8766/nextQuestion",data=json.dumps({'itemBankID':self.courseId,'alreadyAnswered':questionsId,'responseList':responses}),headers=newHeaders)
+                responseJSON = json.loads(response.text)
+                nextQuestion = responseJSON["index"][0]
+                self.score = responseJSON["score"][0]
+                if nextQuestion == -1:
+                    self.finalScore = True
+                    temp = self.__getTasksName(questionsId)
+                    if "final" in self._data:
+                        temp.append("final")    #A MODIFIER POUR RETIRER FINAL
+                    ret2[user] = temp
+                else :
+                    self.finalScore = False
+                    #questionsId = [nextQuestion]       # Only last question displayed
+                    questionsId.append(nextQuestion)    # All Questions displayed
+                    ret2[user] = self.__getTasksName(questionsId)
+                self.database.cat_score.delete_many({'username':user,"courseid":self.courseId})
+                print("NBR question:" + str(len(ret2[user])))
+                self.database.cat_score.insert_one({'username':user,"courseid":self.courseId,'score':self.score,"finalscore":self.finalScore,"nombrequestions":len(ret2[user])})
+            except:
+                ret2[user] = []
         return ret2
 
     def get_ordered_tasks(self):
